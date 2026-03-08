@@ -1,0 +1,114 @@
+{
+  "translation": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Secure access to the surveillance core",
+      "username": "Username",
+      "password": "Password",
+      "button": "Login to System",
+      "error": "Invalid credentials. Please try again.",
+      "register_subtitle": "Register an operative account",
+      "success": "Registration successful! Please login.",
+      "email": "Email Address (Optional)",
+      "phone": "Phone Number (Optional)",
+      "register_btn": "Register Account",
+      "switch_to_register": "Don't have clearance? Request Access",
+      "switch_to_login": "Already an operative? Return to Login"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "cameras": "Cameras",
+      "incidents": "Incidents",
+      "logout": "Logout",
+      "language": "Language"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "active_cameras": "Live Monitor",
+      "detected_incidents": "Suspected Videos",
+      "recent_activity": "Recent Activity",
+      "no_activity": "No recent activity.",
+      "hub_title": "Vision Guard Hub",
+      "incident_desc": "Review and analyze AI-detected violent activities captured by the surveillance network.",
+      "monitor_desc": "Watch the real-time surveillance feed with active AI overlay and event tagging.",
+      "access_title": "Access Management",
+      "access_desc": "Authorize new operatives and manage system clearances across the network.",
+      "diagnostics": "System Diagnostics",
+      "algo_online": "Core Algorithm: ONLINE",
+      "feed_streaming": "Video Feed: STREAMING",
+      "db_connected": "Database: CONNECTED"
+    },
+    "incidents": {
+      "title": "Security Incidents",
+      "confidence": "Confidence",
+      "timestamp": "Time",
+      "status": "Status",
+      "actions": "Actions",
+      "play_video": "Play Video",
+      "no_incidents": "No incidents recorded."
+    },
+    "notifications": {
+      "enable": "Enable Push Notifications",
+      "disabled": "Notifications Disabled",
+      "permission_denied": "Please allow notification permission in your browser.",
+      "not_supported": "Push notifications not supported by your browser.",
+      "error_setup": "An error occurred during subscription setup."
+    },
+    "access_pending": {
+      "title": "Access Pending",
+      "alert_part1": "Your account (",
+      "alert_part2": ") has been successfully registered but is currently awaiting administrator approval.",
+      "desc1": "You have been assigned the default ",
+      "desc2": "UNASSIGNED",
+      "desc3": " role. An administrator must upgrade your role to VIEWER or ADMIN before you can access the Vision Guard system.",
+      "signout": "Sign Out"
+    },
+    "live_monitor": {
+      "back": "Back to Hub",
+      "title": "Live Surveillance Monitor",
+      "offline": "CAMERA OFFLINE",
+      "connecting": "CONNECTING...",
+      "live": "LIVE FEED ACTIVE",
+      "ai_active": "AI Active",
+      "establishing": "Establishing secure video link...",
+      "unavailable": "Feed Unavailable",
+      "error_desc": "The camera service is currently offline or unreachable. Please check the infrastructure.",
+      "retry": "Retry Connection",
+      "primary_sector": "Primary Sector - REC"
+    },
+    "suspected_videos": {
+      "back": "Back to Hub",
+      "title": "Suspected Videos Archive",
+      "secure": "No violent incidents detected. The perimeter is secure.",
+      "match": "Match",
+      "cam": "CAM: ",
+      "watch": "Watch Clip"
+    },
+    "user_management": {
+      "back": "Back to Hub",
+      "title": "Network Authorization",
+      "add_user": "Add New User",
+      "add_desc": "Register a new user manually. They will be UNASSIGNED until updated. (Default pass: '123456')",
+      "username_placeholder": "Enter Username",
+      "add_btn": "Add User Account",
+      "roster": "Operatives Roster",
+      "th_username": "Username",
+      "th_role": "Role",
+      "th_actions": "Actions",
+      "set_viewer": "Set Viewer",
+      "set_admin": "Set Admin"
+    },
+    "video_player": {
+      "back": "Back to Archive",
+      "title": "Incident Review",
+      "overview": "Incident Overview",
+      "cam_seq": "Camera Sequence",
+      "confidence": "Detection Confidence",
+      "date": "Date",
+      "time": "Time",
+      "confirm": "Confirm Incident",
+      "dismiss": "Dismiss as False Positive",
+      "not_supported": "Your browser does not support the video tag."
+    }
+  }
+}

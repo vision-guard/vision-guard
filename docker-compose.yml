@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.9-alpine
+    container_name: vision_guard_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - vision_guard_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: vision_guard_postgres
+    environment:
+      POSTGRES_USER: vision_user
+      POSTGRES_PASSWORD: vision_password
+      POSTGRES_DB: vision_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vision_guard_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  minio:
+    image: minio/minio:RELEASE.2023-09-30T07-02-29Z
+    container_name: vision_guard_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_user
+      MINIO_ROOT_PASSWORD: minio_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - vision_guard_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  camera_service:
+    build: ./camera_service
+    container_name: vision_guard_camera
+    depends_on:
+      - rabbitmq
+    environment:
+      USE_WEBCAM: "False"
+      RABBITMQ_HOST: rabbitmq
+    # devices:
+    #   - "/dev/video0:/dev/video0" # Optional, only if device exists
+    ports:
+      - "8000:8000"
+    networks:
+      - vision_guard_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  algorithm_service:
+    build: ./algorithm_service
+    container_name: vision_guard_algorithm
+    depends_on:
+      - rabbitmq
+    environment:
+      USE_GPU: "False"
+      RABBITMQ_HOST: rabbitmq
+    volumes:
+      - ./algorithm_service/titan_model.pth:/app/titan_model.pth
+    networks:
+      - vision_guard_net
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 2.5G
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [ gpu ]
+
+  orchestration_service:
+    build: ./orchestration_service
+    container_name: vision_guard_orchestration
+    depends_on:
+      - rabbitmq
+      - postgres
+      - minio
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: vision_user
+      POSTGRES_PASSWORD: vision_password
+      POSTGRES_DB: vision_db
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minio_user
+      MINIO_SECRET_KEY: minio_password
+      RABBITMQ_HOST: rabbitmq
+      CAMERA_STREAM_EXTERNAL_URL: "http://localhost:8000/live"
+    ports:
+      - "8001:8001"
+    networks:
+      - vision_guard_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  client:
+    build: ./client
+    container_name: vision_guard_client
+    ports:
+      - "3000:3000"
+    networks:
+      - vision_guard_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  vision_guard_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:

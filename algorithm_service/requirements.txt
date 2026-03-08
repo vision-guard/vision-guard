@@ -1,0 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch
+torchvision
+numpy
+pika
+opencv-python-headless
+fastapi
+uvicorn

@@ -1,0 +1,23 @@
+# Environments and Secrets
+.env
+venv/
+__pycache__/
+*.pyc
+
+# Node & React
+node_modules/
+dist/
+build/
+.npm/
+
+# Large Files & ML Models (CRITICAL)
+*.pth
+*.pt
+*.onnx
+*.weights
+camera_service/videos/*.mp4
+camera_service/videos/*.avi
+
+# OS Files
+.DS_Store
+Thumbs.db

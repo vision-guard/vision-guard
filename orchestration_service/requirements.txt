@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+psycopg2-binary
+pika
+minio
+opencv-python-headless
+numpy
+pydantic
+pywebpush
+cryptography
