@@ -10,7 +10,7 @@ from rabbitmq_client import RabbitMQClient
 logger = logging.getLogger(__name__)
 
 
-def stream_video(video_path: str, camera_id: str, rabbit: RabbitMQClient):
+def stream_video(video_path: str, rabbit: RabbitMQClient):
     """Read a video file and publish frame clips to RabbitMQ.
 
     Strategy (sliding window):
@@ -27,9 +27,7 @@ def stream_video(video_path: str, camera_id: str, rabbit: RabbitMQClient):
         return
 
     original_fps = cap.get(cv2.CAP_PROP_FPS) or 30
-    # How many raw frames to skip between each sampled frame
     sample_interval = max(1, int(original_fps / FPS))
-    # How many raw frames to skip during the gap between clips
     gap_frames = int(original_fps * CLIP_GAP)
 
     frame_count = 0
@@ -37,12 +35,12 @@ def stream_video(video_path: str, camera_id: str, rabbit: RabbitMQClient):
     clip_number = 0
 
     logger.info(
-        f"Streaming {video_path} (camera={camera_id}, "
-        f"{FPS} fps, clip={CLIP_LENGTH} frames, gap={CLIP_GAP}s)"
+        f"Streaming {video_path} "
+        f"({FPS} fps, clip={CLIP_LENGTH} frames, gap={CLIP_GAP}s)"
     )
 
     while cap.isOpened():
-        clip_id = f"{camera_id}_{uuid.uuid4().hex[:8]}"
+        clip_id = uuid.uuid4().hex[:8]
         clip_frame_index = 0
         clip_number += 1
 
@@ -62,7 +60,6 @@ def stream_video(video_path: str, camera_id: str, rabbit: RabbitMQClient):
             _, buffer = cv2.imencode(".jpg", frame)
 
             headers = {
-                "camera_id": camera_id,
                 "clip_id": clip_id,
                 "clip_frame_index": clip_frame_index,
                 "clip_length": CLIP_LENGTH,

@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 rabbit = RabbitMQClient()
-active_streams: dict[str, threading.Thread] = {}
+stream_thread: threading.Thread | None = None
 
 
 @asynccontextmanager
@@ -27,7 +27,8 @@ app = FastAPI(title="Vision Guard - Camera Service (Mock)", lifespan=lifespan)
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "active_streams": list(active_streams.keys())}
+    is_streaming = stream_thread is not None and stream_thread.is_alive()
+    return {"status": "ok", "streaming": is_streaming}
 
 
 @app.get("/videos")
@@ -41,36 +42,33 @@ def list_videos():
     return {"videos": files}
 
 
-@app.post("/stream/{camera_id}")
-def start_stream(camera_id: str, filename: str):
-    """Start streaming a video file as a mock camera feed.
+@app.post("/stream")
+def start_stream(filename: str):
+    """Start streaming a video file as a mock camera feed."""
+    global stream_thread
 
-    Args:
-        camera_id: Identifier for this camera source.
-        filename: Name of the video file inside the videos directory.
-    """
-    if camera_id in active_streams and active_streams[camera_id].is_alive():
-        raise HTTPException(status_code=409, detail=f"Camera {camera_id} is already streaming")
+    if stream_thread is not None and stream_thread.is_alive():
+        raise HTTPException(status_code=409, detail="A stream is already running")
 
     video_path = Path(VIDEO_DIR) / filename
     if not video_path.exists():
         raise HTTPException(status_code=404, detail=f"Video file not found: {filename}")
 
-    thread = threading.Thread(
+    stream_thread = threading.Thread(
         target=stream_video,
-        args=(str(video_path), camera_id, rabbit),
+        args=(str(video_path), rabbit),
         daemon=True,
     )
-    thread.start()
-    active_streams[camera_id] = thread
+    stream_thread.start()
 
-    return {"message": f"Started streaming {filename} as camera {camera_id}"}
+    return {"message": f"Started streaming {filename}"}
 
 
-@app.post("/stop/{camera_id}")
-def stop_stream(camera_id: str):
-    """Stop info for a camera stream (stream finishes when video ends)."""
-    if camera_id not in active_streams:
-        raise HTTPException(status_code=404, detail=f"No active stream for camera {camera_id}")
-    del active_streams[camera_id]
-    return {"message": f"Removed camera {camera_id} from active streams"}
+@app.post("/stop")
+def stop_stream():
+    """Clear the stream reference (stream finishes when video ends)."""
+    global stream_thread
+    if stream_thread is None or not stream_thread.is_alive():
+        raise HTTPException(status_code=404, detail="No active stream")
+    stream_thread = None
+    return {"message": "Stream removed"}
