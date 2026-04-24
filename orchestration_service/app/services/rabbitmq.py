@@ -25,6 +25,7 @@ def frame_consumer_loop():
         try:
             connection = pika.BlockingConnection(pika.ConnectionParameters(host=settings.RABBITMQ_HOST))
             channel = connection.channel()
+            channel.exchange_declare(exchange='video_frames', exchange_type='fanout')
             result = channel.queue_declare(queue='', exclusive=True)
             queue_name = result.method.queue
             channel.queue_bind(exchange='video_frames', queue=queue_name)

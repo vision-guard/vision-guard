@@ -2,17 +2,23 @@ version: '3.8'
 
 services:
   rabbitmq:
-    image: rabbitmq:3.9-alpine
+    image: rabbitmq:3.9-management-alpine
     container_name: vision_guard_rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - vision_guard_net
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M
 
   postgres:
     image: postgres:15-alpine
@@ -53,7 +59,8 @@ services:
     build: ./camera_service
     container_name: vision_guard_camera
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       USE_WEBCAM: "False"
       RABBITMQ_HOST: rabbitmq
@@ -72,12 +79,13 @@ services:
     build: ./algorithm_service
     container_name: vision_guard_algorithm
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       USE_GPU: "False"
       RABBITMQ_HOST: rabbitmq
     volumes:
-      - ./algorithm_service/titan_model.pth:/app/titan_model.pth
+      - ./algorithm_service/titan_v3_best.pth:/app/titan_v3_best.pth
     networks:
       - vision_guard_net
     # deploy:
@@ -94,9 +102,12 @@ services:
     build: ./orchestration_service
     container_name: vision_guard_orchestration
     depends_on:
-      - rabbitmq
-      - postgres
-      - minio
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      minio:
+        condition: service_started
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_USER: vision_user
