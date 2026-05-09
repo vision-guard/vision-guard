@@ -12,7 +12,6 @@ import csv
 import random
 from tqdm import tqdm
 
-# --- הגדרות ---
 IMG_SIZE = 112          
 SEQ_LENGTH = 16         
 FRAME_SKIP = 2          
@@ -23,9 +22,7 @@ LEARNING_RATE = 2e-4
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"🔥 Titan Training on {device}")
 
-# ==========================================
-# חלק 1: הארכיטקטורה המקורית שלך (בלי מודלים מוכנים!)
-# ==========================================
+
 class TemporalAttention(nn.Module):
     def __init__(self, hidden_size):
         super(TemporalAttention, self).__init__()
@@ -93,9 +90,7 @@ class UltimateGladiator(nn.Module):
         attn_out, _ = self.attention(lstm_out)
         return self.fc2(self.dropout(self.relu(self.fc1(attn_out))))
 
-# ==========================================
-# חלק 2: מנוע Focal Loss
-# ==========================================
+
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.25, gamma=2.0):
         super(FocalLoss, self).__init__()
@@ -109,18 +104,15 @@ class FocalLoss(nn.Module):
         focal_loss = self.alpha * (1 - pt) ** self.gamma * bce_loss
         return focal_loss.mean()
 
-# ==========================================
-# חלק 3: Augmentation קשוח וקריאת נתונים
-# ==========================================
+
 def video_transform(frames, is_training):
     if not is_training:
         return frames
 
-    # היפוך אופקי ושינוי בהירות
+
     flip_h = random.random() > 0.5
     brightness_shift = random.uniform(-0.15, 0.15)
     
-    # --- השדרוג: Zoom אקראי שמונע למידה של "זירת אגרוף" ---
     do_zoom = random.random() > 0.5
     zoom_factor = random.uniform(0.7, 0.95) if do_zoom else 1.0
 
@@ -194,18 +186,14 @@ class ViolenceDataset(Dataset):
             combined_frames = np.concatenate((combined_frames, padding))
         return combined_frames
 
-# --- השדרוג הענק: איסוף מסיבי של סרטוני עלית ---
+
 def get_massive_datasets():
     print("🌍 Downloading Elite Datasets (Street, CCTV, Sports, Aggression)...")
     paths, labels = [], []
     
-    # 1. הדאטאסט המקורי (מכות רחוב וחיים אמיתיים)
     dir1 = kagglehub.dataset_download("mohamedmustafa/real-life-violence-situations-dataset")
     
-    # 3. דאטאסט עיר חכמה (זווית מצלמות אבטחה אמיתיות) - הבחירה שלך!
     dir3 = kagglehub.dataset_download("toluwaniaremu/smartcity-cctv-violence-detection-dataset-scvd")
-    
-    # 4. התנהגות אגרסיבית (מרחיב את סוגי האלימות) - הבחירה שלך!
     dir4 = kagglehub.dataset_download("trainingdatapro/aggressive-behavior-video-classification")
     
     directories = [dir1, dir3, dir4]
@@ -215,10 +203,8 @@ def get_massive_datasets():
             label = None
             lower_root = root.lower()
             
-            # שלב א': חיפוש תיקיות בטוחות (חשוב שזה יהיה ראשון בגלל מילים כמו non-violence)
             if any(x in lower_root for x in ["nonviolence", "non-violence", "safe", "nonfight", "nofight", "normal", "non-aggressive", "non_aggressive"]):
                 label = 0
-            # שלב ב': חיפוש תיקיות אלימות
             elif any(x in lower_root for x in ["violence", "fight", "aggressive"]):
                 label = 1
                 
@@ -230,13 +216,10 @@ def get_massive_datasets():
                         
     print(f"📥 TOTAL Elite Videos Gathered for Training: {len(paths)}")
     return paths, labels
-# ==========================================
-# חלק 4: אימון Titan (עם הדאטא המורחב)
-# ==========================================
+
 def train_titan():
     print("⚔️ Launching TITAN V3 - FRESH START (Zero Knowledge)")
     
-    # איסוף הנתונים (7643 סרטונים!)
     files, labels = get_massive_datasets()
     
     X_train, X_val, y_train, y_val = train_test_split(files, labels, test_size=0.2, random_state=42)
@@ -244,27 +227,24 @@ def train_titan():
     train_ds = ViolenceDataset(X_train, y_train, is_training=True)
     val_ds = ViolenceDataset(X_val, y_val, is_training=False)
     
-    # העליתי טיפה את ה-Batch Size ל-8 אם יש לך כרטיס מסך חזק, אם לא - תשאיר 4.
+
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False)
-    
-    # יצירת המודל מ-0
+
     model = UltimateGladiator().to(device)
     print("🆕 Model initialized with random weights. Training from scratch...")
 
-    # Focal Loss - נשארים עם הפרמטרים המנצחים
     criterion = FocalLoss(alpha=0.25, gamma=2.0)
     
-    # אופטימייזר AdamW - מעולה למניעת Overfitting
+ 
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-3)
     
-    # סקדולר - גלי קוסינוס לחיפוש עמקים גלובליים
+  
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=1e-6)
     
     best_acc = 0
     csv_filename = "titan_v3_scratch_log.csv"
     
-    # יצירת קובץ לוג חדש
     with open(csv_filename, mode='w', newline='') as file:
         csv.writer(file).writerow(['epoch', 'accuracy', 'loss', 'val_accuracy', 'val_loss'])
     
@@ -291,7 +271,6 @@ def train_titan():
         train_acc_final = correct / total
         train_loss_final = train_loss / len(train_loader)
             
-        # בדיקה על נתוני המבחן (Validation)
         model.eval()
         val_loss, val_correct, val_total = 0, 0, 0
         with torch.no_grad():
@@ -310,13 +289,11 @@ def train_titan():
         
         print(f"📊 Validation -> Loss: {val_loss_final:.4f} | Accuracy: {val_acc_final*100:.2f}%")
         
-        # שמירת המודל הכי טוב
         if val_acc_final > best_acc:
             best_acc = val_acc_final
             torch.save(model.state_dict(), "titan_v3_best.pth")
             print(f"💾 Saved new champion with {val_acc_final*100:.2f}% accuracy!")
         
-        # רישום ללוג
         with open(csv_filename, mode='a', newline='') as file:
             csv.writer(file).writerow([epoch, train_acc_final, train_loss_final, val_acc_final, val_loss_final])
 if __name__ == "__main__":
