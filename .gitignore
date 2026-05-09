@@ -14,8 +14,6 @@ build/
 *.pt
 *.onnx
 *.weights
-camera_service/videos/*.mp4
-camera_service/videos/*.avi
 
 # OS Files
 .DS_Store
