@@ -85,7 +85,7 @@ services:
       USE_GPU: "False"
       RABBITMQ_HOST: rabbitmq
     volumes:
-      - ./algorithm_service/titan_v3_best.pth:/app/titan_v3_best.pth
+      - ./algorithm_service/gladiator_best_weights.pth:/app/gladiator_best_weights.pth
     networks:
       - vision_guard_net
     # deploy:
