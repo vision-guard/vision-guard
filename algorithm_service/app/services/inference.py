@@ -8,14 +8,17 @@ import pika
 import numpy as np
 import collections
 from app.core.config import settings
-from app.models.architectures import UltimateGladiator
+from app.models.architectures import StreamSentinelViT
 
 logger = logging.getLogger(__name__)
 logging.getLogger("pika").setLevel(logging.WARNING)
 
 # Constants
+IMG_SIZE = 112
 SEQ_LENGTH = 16
 FRAME_SKIP = 2
+PROB_BUFFER_SIZE = 5
+ALERT_THRESHOLD = 0.478
 
 # Check device
 device = 'cpu'
@@ -28,8 +31,8 @@ if settings.USE_GPU:
 else:
     logger.info("Using CPU for inference")
 
-# Load Model (תיקון 2: בלי num_classes=2, קוראים למודל בדיוק כמו באימון)
-model = UltimateGladiator()
+# Load Model
+model = StreamSentinelViT(seq_length=SEQ_LENGTH)
 model.to(device)
 model.eval()
 
@@ -37,15 +40,15 @@ if os.path.exists(settings.MODEL_PATH):
     logger.info(f"Loading weights from {settings.MODEL_PATH}")
     try:
         state_dict = torch.load(settings.MODEL_PATH, map_location=device)
-        model.load_state_dict(state_dict, strict=False)
+        model.load_state_dict(state_dict, strict=True)
     except Exception as e:
         logger.error(f"Failed to load model weights: {e}")
 else:
     logger.warning(f"Model file {settings.MODEL_PATH} not found! Using random initialization.")
 
-# זיכרון גלובלי של המערכת (לא נמחק אף פעם!)
+# Global runtime buffers
 sliding_window = collections.deque(maxlen=SEQ_LENGTH)
-prob_buffer = collections.deque(maxlen=5) # בולם זעזועים (ממוצע נע)
+prob_buffer = collections.deque(maxlen=PROB_BUFFER_SIZE)
 frame_counter = 0
 
 def process_single_frame(frame):
@@ -55,17 +58,15 @@ def process_single_frame(frame):
     if frame_counter % FRAME_SKIP != 0:
         return
         
-    # 1. הכנת הפריים (המרת צבעים ונרמול כמו באימון)
-    f = cv2.resize(frame, (112, 112))
-    f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB) # המודל אומן על RGB
+    # 1. Prepare frame using the notebook preprocessing path
+    f = cv2.resize(frame, (IMG_SIZE, IMG_SIZE))
+    f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
     curr_frame = f.astype(np.float32) / 255.0
     
-    # הוספה לחלון הזז של הפריים הרגיל (RGB)
     sliding_window.append(curr_frame)
     
-    # 3. מריצים זיהוי רק כשיש 16 פריימים מוכנים
+    # Run inference once the temporal window is full
     if len(sliding_window) == SEQ_LENGTH:
-        # בניה מחדש של הוידאו בדיוק כמו ב-train_titan.py (frame 0 motion diff is 0)
         raw_frames = list(sliding_window)
         combined_frames = []
         for i in range(len(raw_frames)):
@@ -79,17 +80,14 @@ def process_single_frame(frame):
         
         with torch.no_grad():
             output = model(input_tensor)
-            # שימוש ב-Sigmoid כמו באימון
             raw_prob = torch.sigmoid(output).item()
             
-        # 4. ממוצע נע למניעת קפיצות רגעיות
         prob_buffer.append(raw_prob)
         smoothed_prob = sum(prob_buffer) / len(prob_buffer)
         
         logger.info(f"Inference result: Raw={raw_prob:.4f} Smoothed={smoothed_prob:.4f}")
         
-        # 5. שיגור התראה ל-RabbitMQ אם חצינו את הרף
-        if smoothed_prob > 0.478:
+        if smoothed_prob > ALERT_THRESHOLD:
             logger.info("🚨 PUBLISH: Violence Threshold Crossed!")
             publish_event(smoothed_prob)
 

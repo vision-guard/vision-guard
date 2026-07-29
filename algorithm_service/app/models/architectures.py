@@ -1,72 +1,70 @@
 import torch
 import torch.nn as nn
+import math
 
-class TemporalAttention(nn.Module):
-    def __init__(self, hidden_size):
-        super(TemporalAttention, self).__init__()
-        self.attention = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size // 2),
-            nn.Tanh(),
-            nn.Linear(hidden_size // 2, 1)
-        )
-    def forward(self, lstm_out):
-        attn_weights = torch.softmax(self.attention(lstm_out), dim=1)
-        context = torch.sum(attn_weights * lstm_out, dim=1)
-        return context, attn_weights
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=50):
+        super(PositionalEncoding, self).__init__()
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        self.register_buffer("pe", pe.unsqueeze(0))
 
-class ResidualBlock3D(nn.Module):
-    def __init__(self, in_channels, out_channels, spatial_stride=1, temporal_stride=1):
-        super(ResidualBlock3D, self).__init__()
-        self.conv1 = nn.Conv3d(in_channels, out_channels, kernel_size=3, 
-                               stride=(temporal_stride, spatial_stride, spatial_stride), padding=1, bias=False)
-        self.bn1 = nn.BatchNorm3d(out_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv3d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm3d(out_channels)
-        self.shortcut = nn.Sequential()
-        if spatial_stride != 1 or temporal_stride != 1 or in_channels != out_channels:
-            self.shortcut = nn.Sequential(
-                nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=(temporal_stride, spatial_stride, spatial_stride), bias=False),
-                nn.BatchNorm3d(out_channels)
-            )
     def forward(self, x):
-        out = self.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out += self.shortcut(x)
-        return self.relu(out)
+        return x + self.pe[:, : x.size(1), :].to(x.device)
 
-class UltimateGladiator(nn.Module):
+class ConvSpatialExtractor(nn.Module):
     def __init__(self):
-        super(UltimateGladiator, self).__init__()
-        self.conv1 = nn.Conv3d(6, 32, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm3d(32)
-        self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(32, 32, 1, 1)
-        self.layer2 = self._make_layer(32, 64, 2, 1)
-        self.layer3 = self._make_layer(64, 128, 2, 2)
-        self.layer4 = self._make_layer(128, 256, 2, 1)
-        self.spatial_pool = nn.AdaptiveAvgPool3d((None, 1, 1))
-        self.lstm = nn.LSTM(256, 128, num_layers=2, batch_first=True, dropout=0.4)
-        self.attention = TemporalAttention(128)
-        self.fc1 = nn.Linear(128, 64)
-        self.fc2 = nn.Linear(64, 1)
-        self.dropout = nn.Dropout(0.5)
-
-    def _make_layer(self, in_channels, out_channels, spatial_stride, temporal_stride):
-        return nn.Sequential(
-            ResidualBlock3D(in_channels, out_channels, spatial_stride, temporal_stride),
-            ResidualBlock3D(out_channels, out_channels, 1, 1)
+        super(ConvSpatialExtractor, self).__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(6, 32, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d((1, 1)),
         )
+
     def forward(self, x):
-        out = self.relu(self.bn1(self.conv1(x)))
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
-        out = self.spatial_pool(out).squeeze(-1).squeeze(-1).permute(0, 2, 1)
-        lstm_out, _ = self.lstm(out)
-        attn_out, _ = self.attention(lstm_out)
-        return self.fc2(self.dropout(self.relu(self.fc1(attn_out))))
+        return self.features(x).view(x.size(0), -1)
+
+class StreamSentinelViT(nn.Module):
+    def __init__(self, embed_dim=128, num_heads=4, num_layers=2, seq_length=16):
+        super(StreamSentinelViT, self).__init__()
+        self.spatial_extractor = ConvSpatialExtractor()
+        self.pos_encoder = PositionalEncoding(embed_dim, max_len=seq_length)
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embed_dim,
+            nhead=num_heads,
+            dim_feedforward=embed_dim * 4,
+            dropout=0.3,
+            batch_first=True,
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.classifier = nn.Sequential(
+            nn.Linear(embed_dim, 64),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.4),
+            nn.Linear(64, 1),
+        )
+
+    def forward(self, x):
+        batch_size, channels, time_steps, height, width = x.size()
+        x = x.permute(0, 2, 1, 3, 4).reshape(batch_size * time_steps, channels, height, width)
+        spatial_features = self.spatial_extractor(x)
+        x = spatial_features.view(batch_size, time_steps, -1)
+        x = self.pos_encoder(x)
+        x = self.transformer(x)
+        x = x.mean(dim=1)
+        return self.classifier(x)
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.25, gamma=2.0):
