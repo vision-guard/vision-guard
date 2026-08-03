@@ -84,8 +84,13 @@ services:
     environment:
       USE_GPU: "False"
       RABBITMQ_HOST: rabbitmq
+      MODEL_PATH: /app/sentinel_best_f1.pth
+      VIOLENCE_THRESHOLD: "0.5"
+      PROB_SMOOTHING_WINDOW: "5"
+      CONSECUTIVE_WINDOWS_TO_ALERT: "3"
+      ALERT_COOLDOWN_SECONDS: "3"
     volumes:
-      - ./algorithm_service/gladiator_best_weights.pth:/app/gladiator_best_weights.pth
+      - ./algorithm_service/sentinel_best_f1.pth:/app/sentinel_best_f1.pth
     networks:
       - vision_guard_net
     # deploy:

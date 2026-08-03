@@ -5,7 +5,7 @@ Vision Guard is a local-only microservices architecture for detecting violence i
 ## Architecture
 
 - **Camera Service**: Captures video (Webcam/File), streams MJPEG to client, publishes frames to RabbitMQ.
-- **Algorithm Service**: Consumes frames, runs PyTorch inference (`UltimateGladiator` model), detects violence, alerts via RabbitMQ. Supports CPU/GPU.
+- **Algorithm Service**: Consumes frames, runs PyTorch inference (`StreamSentinelViT` model), detects violence, alerts via RabbitMQ. Supports CPU/GPU.
 - **Orchestration Service**: Consumes alerts, saves video clips to Minio, metadata to PostgreSQL, provides API.
 - **Client**: React/Vite dashboard for live monitoring and incident review.
 - **Infrastructure**: RabbitMQ, PostgreSQL, Minio.
@@ -14,12 +14,12 @@ Vision Guard is a local-only microservices architecture for detecting violence i
 
 - Docker & Docker Compose
 - NVIDIA GPU (Optional, requires nvidia-container-toolkit)
-- `titan_model.pth` weights file
+- `sentinel_best_f1.pth` weights file
 
 ## Setup
 
 1. **Place Model Weights**:
-   Put your `titan_model.pth` file in the `algorithm_service/` directory.
+   Put your `sentinel_best_f1.pth` file in the `algorithm_service/` directory.
 
 2. **Add Video Files (Optional)**:
    If not using a webcam, place your video files (`.mp4`, `.avi`) in `camera_service/videos/`.

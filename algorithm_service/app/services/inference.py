@@ -8,7 +8,7 @@ import pika
 import numpy as np
 import collections
 from app.core.config import settings
-from app.models.architectures import UltimateGladiator
+from app.models.architectures import StreamSentinelViT
 
 logger = logging.getLogger(__name__)
 logging.getLogger("pika").setLevel(logging.WARNING)
@@ -28,28 +28,42 @@ if settings.USE_GPU:
 else:
     logger.info("Using CPU for inference")
 
-# Load Model (תיקון 2: בלי num_classes=2, קוראים למודל בדיוק כמו באימון)
-model = UltimateGladiator()
+# Load model architecture used during training.
+model = StreamSentinelViT()
 model.to(device)
-model.eval()
 
-if os.path.exists(settings.MODEL_PATH):
-    logger.info(f"Loading weights from {settings.MODEL_PATH}")
-    try:
-        state_dict = torch.load(settings.MODEL_PATH, map_location=device)
-        model.load_state_dict(state_dict, strict=False)
-    except Exception as e:
-        logger.error(f"Failed to load model weights: {e}")
-else:
-    logger.warning(f"Model file {settings.MODEL_PATH} not found! Using random initialization.")
+if not os.path.exists(settings.MODEL_PATH):
+    raise FileNotFoundError(f"Model file {settings.MODEL_PATH} not found")
 
-# זיכרון גלובלי של המערכת (לא נמחק אף פעם!)
+logger.info(f"Loading weights from {settings.MODEL_PATH}")
+try:
+    checkpoint = torch.load(settings.MODEL_PATH, map_location=device)
+    if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+        state_dict = checkpoint["state_dict"]
+    else:
+        state_dict = checkpoint
+
+    model.load_state_dict(state_dict, strict=True)
+    model.eval()
+    logger.info(
+        "Model loaded successfully | threshold=%.3f smoothing=%d consecutive=%d cooldown=%.1fs",
+        settings.VIOLENCE_THRESHOLD,
+        settings.PROB_SMOOTHING_WINDOW,
+        settings.CONSECUTIVE_WINDOWS_TO_ALERT,
+        settings.ALERT_COOLDOWN_SECONDS,
+    )
+except Exception as e:
+    raise RuntimeError(f"Failed to load model weights from {settings.MODEL_PATH}: {e}") from e
+
+# Global runtime memory.
 sliding_window = collections.deque(maxlen=SEQ_LENGTH)
-prob_buffer = collections.deque(maxlen=5) # בולם זעזועים (ממוצע נע)
+prob_buffer = collections.deque(maxlen=settings.PROB_SMOOTHING_WINDOW)
 frame_counter = 0
+above_threshold_streak = 0
+last_alert_ts = 0.0
 
 def process_single_frame(frame):
-    global frame_counter
+    global frame_counter, above_threshold_streak, last_alert_ts
     
     frame_counter += 1
     if frame_counter % FRAME_SKIP != 0:
@@ -82,16 +96,24 @@ def process_single_frame(frame):
             # שימוש ב-Sigmoid כמו באימון
             raw_prob = torch.sigmoid(output).item()
             
-        # 4. ממוצע נע למניעת קפיצות רגעיות
+        # Smooth prediction to reduce short spikes.
         prob_buffer.append(raw_prob)
         smoothed_prob = sum(prob_buffer) / len(prob_buffer)
         
         logger.info(f"Inference result: Raw={raw_prob:.4f} Smoothed={smoothed_prob:.4f}")
         
-        # 5. שיגור התראה ל-RabbitMQ אם חצינו את הרף
-        if smoothed_prob > 0.478:
+        if smoothed_prob >= settings.VIOLENCE_THRESHOLD:
+            above_threshold_streak += 1
+        else:
+            above_threshold_streak = 0
+
+        # Debounce: require consecutive high windows and cooldown gap between alerts.
+        now_ts = time.time()
+        can_publish = (now_ts - last_alert_ts) >= settings.ALERT_COOLDOWN_SECONDS
+        if above_threshold_streak >= settings.CONSECUTIVE_WINDOWS_TO_ALERT and can_publish:
             logger.info("🚨 PUBLISH: Violence Threshold Crossed!")
             publish_event(smoothed_prob)
+            last_alert_ts = now_ts
 
 def publish_event(confidence):
     try:
@@ -113,11 +135,13 @@ def publish_event(confidence):
         logger.error(f"Failed to publish event: {e}")
 
 def start_consumer_loop():
-    # איפוס נתונים במקרה של הפעלה מחדש
+    # Reset state for restart.
     sliding_window.clear()
     prob_buffer.clear()
-    global frame_counter
+    global frame_counter, above_threshold_streak, last_alert_ts
     frame_counter = 0
+    above_threshold_streak = 0
+    last_alert_ts = 0.0
 
     while True:
         try:
