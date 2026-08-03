@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, PlayCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { apiCall } from '../services/api';
-import { useTranslation } from 'react-i18next';
 
 const SuspectedVideos = () => {
-    const { t } = useTranslation();
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
@@ -35,9 +33,9 @@ const SuspectedVideos = () => {
         <div className="page-container flex-col">
             <header className="page-header">
                 <button className="btn-back" onClick={() => navigate('/home')}>
-                    <ArrowLeft size={20} /> {t('suspected_videos.back')}
+                    <ArrowLeft size={20} /> Back to Hub
                 </button>
-                <h1><AlertTriangle className="text-danger" /> {t('suspected_videos.title')}</h1>
+                <h1><AlertTriangle className="text-danger" /> Suspected Videos Archive</h1>
             </header>
 
             <div className="content-scrollable">
@@ -46,7 +44,7 @@ const SuspectedVideos = () => {
                 ) : videos.length === 0 ? (
                     <div className="empty-state glass-panel">
                         <ShieldCheck size={48} className="text-success mb-2" />
-                        <p>{t('suspected_videos.secure')}</p>
+                        <p>No violent incidents detected. The perimeter is secure.</p>
                     </div>
                 ) : (
                     <div className="video-grid">
@@ -58,9 +56,9 @@ const SuspectedVideos = () => {
                             >
                                 <div className="video-card-header">
                                     <span className={`confidence-badge ${vid.confidence > 0.85 ? 'high' : 'medium'}`}>
-                                        {(vid.confidence * 100).toFixed(1)}{t('suspected_videos.match')}
+                                        {(vid.confidence * 100).toFixed(1)}% Match
                                     </span>
-                                    <span className="camera-label">{t('suspected_videos.cam')}{vid.camera_id}</span>
+                                    <span className="camera-label">CAM: {vid.camera_id}</span>
                                 </div>
 
                                 <div className="video-card-body">
@@ -74,7 +72,7 @@ const SuspectedVideos = () => {
 
                                 <div className="video-card-footer">
                                     <button className="btn btn-outline-primary btn-block" onClick={() => handleWatch(vid)}>
-                                        <PlayCircle size={18} /> {t('suspected_videos.watch')}
+                                        <PlayCircle size={18} /> Watch Clip
                                     </button>
                                 </div>
                             </div>

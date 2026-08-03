@@ -1,11 +1,9 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useTranslation } from 'react-i18next';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user } = useAuth();
-    const { t } = useTranslation();
     const location = useLocation();
 
     if (!user) {
@@ -22,7 +20,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         if (location.pathname === '/home') {
             // To absolutely prevent infinite loops if we are already at home but unauthorized
             // (Ideally this shouldn't happen if user.role is valid and allowedRoles includes it)
-            return <div>{t('access_pending.unauthorized', 'Unauthorized Access. Check your role permissions.')}</div>;
+            return <div>Unauthorized Access. Check your role permissions.</div>;
         }
         return <Navigate to="/home" replace />;
     }

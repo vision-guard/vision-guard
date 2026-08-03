@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { apiCall } from '../services/api';
-import { useTranslation } from 'react-i18next';
 
 const urlB64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -21,7 +20,6 @@ const urlB64ToUint8Array = (base64String) => {
 const NotificationButton = () => {
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [loading, setLoading] = useState(false);
-    const { t } = useTranslation();
 
     useEffect(() => {
         checkSubscription();
@@ -40,7 +38,7 @@ const NotificationButton = () => {
 
     const subscribeUser = async () => {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            alert(t('notifications.not_supported'));
+            alert('Push notifications not supported by your browser.');
             return;
         }
 
@@ -69,9 +67,9 @@ const NotificationButton = () => {
         } catch (error) {
             console.error('Failed to subscribe to push notifications:', error);
             if (Notification.permission === 'denied') {
-                alert(t('notifications.permission_denied'));
+                alert('Please allow notification permission in your browser.');
             } else {
-                alert(t('notifications.error_setup'));
+                alert('An error occurred during subscription setup.');
             }
         } finally {
             setLoading(false);
@@ -83,7 +81,7 @@ const NotificationButton = () => {
             onClick={subscribeUser} 
             disabled={isSubscribed || loading}
             className={`btn-icon ${isSubscribed ? 'text-green-400' : 'text-gray-300'}`}
-            title={isSubscribed ? t('notifications.disabled') : t('notifications.enable')}
+            title={isSubscribed ? 'Notifications Disabled' : 'Enable Push Notifications'}
         >
             {isSubscribed ? <Bell size={20} /> : <BellOff size={20} />}
         </button>
