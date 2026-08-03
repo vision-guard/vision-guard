@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, UserPlus, ShieldPlus, ShieldAlert } from 'lucide-react';
 import { apiCall } from '../services/api';
-import { useTranslation } from 'react-i18next';
 
 const UserAccessManagement = () => {
-    const { t } = useTranslation();
     const [username, setUsername] = useState('');
     const [users, setUsers] = useState([]);
     const [status, setStatus] = useState({ type: '', message: '' });
@@ -69,9 +67,9 @@ const UserAccessManagement = () => {
         <div className="page-container flex-col">
             <header className="page-header">
                 <button className="btn-back" onClick={() => navigate('/home')}>
-                    <ArrowLeft size={20} /> {t('user_management.back')}
+                    <ArrowLeft size={20} /> Back to Hub
                 </button>
-                <h1><ShieldPlus className="text-info" /> {t('user_management.title')}</h1>
+                <h1><ShieldPlus className="text-info" /> Network Authorization</h1>
             </header>
 
             {status.message && (
@@ -82,9 +80,9 @@ const UserAccessManagement = () => {
 
             <div className="management-layout" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                 <div className="management-card glass-panel animate-fade-in flex-1" style={{ minWidth: '300px' }}>
-                    <h2>{t('user_management.add_user')}</h2>
+                    <h2>Add New User</h2>
                     <p className="text-muted mb-4">
-                        {t('user_management.add_desc')}
+                        Register a new user manually. They will be UNASSIGNED until updated. (Default pass: '123456')
                     </p>
 
                     <form onSubmit={handleAddUser} className="auth-form mt-4">
@@ -92,7 +90,7 @@ const UserAccessManagement = () => {
                             <UserPlus className="input-icon" size={20} />
                             <input
                                 type="text"
-                                placeholder={t('user_management.username_placeholder')}
+                                placeholder="Enter Username"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
@@ -100,13 +98,13 @@ const UserAccessManagement = () => {
                         </div>
 
                         <button type="submit" className="btn btn-info btn-block mt-4" disabled={loading}>
-                            {loading ? <span className="spinner"></span> : t('user_management.add_btn')}
+                            {loading ? <span className="spinner"></span> : 'Add User Account'}
                         </button>
                     </form>
                 </div>
 
                 <div className="management-card glass-panel animate-fade-in flex-2" style={{ flex: '2', minWidth: '400px' }}>
-                    <h2><ShieldAlert className="text-warning" /> {t('user_management.roster')}</h2>
+                    <h2><ShieldAlert className="text-warning" /> Operatives Roster</h2>
                     {fetchLoading ? (
                         <div className="loader-container"><div className="spinner"></div></div>
                     ) : (
@@ -114,9 +112,9 @@ const UserAccessManagement = () => {
                             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                        <th style={{ padding: '0.75rem' }}>{t('user_management.th_username')}</th>
-                                        <th style={{ padding: '0.75rem' }}>{t('user_management.th_role')}</th>
-                                        <th style={{ padding: '0.75rem' }}>{t('user_management.th_actions')}</th>
+                                        <th style={{ padding: '0.75rem' }}>Username</th>
+                                        <th style={{ padding: '0.75rem' }}>Role</th>
+                                        <th style={{ padding: '0.75rem' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -130,10 +128,10 @@ const UserAccessManagement = () => {
                                             </td>
                                             <td style={{ padding: '0.75rem', display: 'flex', gap: '0.5rem' }}>
                                                 {u.role !== 'VIEWER' && (
-                                                    <button onClick={() => handleRoleUpdate(u.id, 'VIEWER')} className="btn btn-outline-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>{t('user_management.set_viewer')}</button>
+                                                    <button onClick={() => handleRoleUpdate(u.id, 'VIEWER')} className="btn btn-outline-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>Set Viewer</button>
                                                 )}
                                                 {u.role !== 'ADMIN' && (
-                                                    <button onClick={() => handleRoleUpdate(u.id, 'ADMIN')} className="btn btn-outline-danger" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>{t('user_management.set_admin')}</button>
+                                                    <button onClick={() => handleRoleUpdate(u.id, 'ADMIN')} className="btn btn-outline-danger" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>Set Admin</button>
                                                 )}
                                             </td>
                                         </tr>

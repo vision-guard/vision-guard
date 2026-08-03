@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MonitorPlay, AlertTriangle, Activity } from 'lucide-react';
 import { apiCall } from '../services/api';
-import { useTranslation } from 'react-i18next';
 
 const LiveMonitor = () => {
     const navigate = useNavigate();
-    const { t } = useTranslation();
     const [streamUrl, setStreamUrl] = useState('');
     const [loading, setLoading] = useState(true);
     const [cameraError, setCameraError] = useState(false);
@@ -35,9 +33,9 @@ const LiveMonitor = () => {
         <div className="page-container flex-col">
             <header className="page-header">
                 <button className="btn-back" onClick={() => navigate('/home')}>
-                    <ArrowLeft size={20} /> {t('live_monitor.back')}
+                    <ArrowLeft size={20} /> Back to Hub
                 </button>
-                <h1><MonitorPlay className="text-primary" /> {t('live_monitor.title')}</h1>
+                <h1><MonitorPlay className="text-primary" /> Live Surveillance Monitor</h1>
             </header>
 
             <div className="content-scrollable flex-center">
@@ -45,10 +43,10 @@ const LiveMonitor = () => {
                     <div className="monitor-header">
                         <div className="monitor-status">
                             <span className={`dot pulse-dot ${cameraError ? 'offline' : (loading ? 'warning' : 'online')}`}></span>
-                            <span>{cameraError ? t('live_monitor.offline') : (loading ? t('live_monitor.connecting') : t('live_monitor.live'))}</span>
+                            <span>{cameraError ? 'CAMERA OFFLINE' : (loading ? 'CONNECTING...' : 'LIVE FEED ACTIVE')}</span>
                         </div>
                         <div className="ai-overlay-badge">
-                            <Activity size={16} /> {t('live_monitor.ai_active')}
+                            <Activity size={16} /> AI Active
                         </div>
                     </div>
 
@@ -56,27 +54,27 @@ const LiveMonitor = () => {
                         {loading && !cameraError ? (
                             <div className="loader-container h-full">
                                 <div className="spinner-large"></div>
-                                <p className="mt-4 text-muted">{t('live_monitor.establishing')}</p>
+                                <p className="mt-4 text-muted">Establishing secure video link...</p>
                             </div>
                         ) : cameraError ? (
                             <div className="error-container h-full">
                                 <AlertTriangle size={64} className="text-danger mb-4" />
-                                <h3>{t('live_monitor.unavailable')}</h3>
-                                <p className="text-muted">{t('live_monitor.error_desc')}</p>
+                                <h3>Feed Unavailable</h3>
+                                <p className="text-muted">The camera service is currently offline or unreachable. Please check the infrastructure.</p>
                                 <button className="btn btn-outline-primary mt-4" onClick={() => window.location.reload()}>
-                                    {t('live_monitor.retry')}
+                                    Retry Connection
                                 </button>
                             </div>
                         ) : (
                             <div className="video-feed-container">
                                 <img
                                     src={streamUrl}
-                                    alt={t('live_monitor.title')}
+                                    alt="Live Surveillance Monitor"
                                     className="live-video-stream"
                                     onError={handleImageError}
                                 />
                                 <div className="feed-overlay">
-                                    {t('live_monitor.primary_sector')}
+                                    Primary Sector - REC
                                 </div>
                             </div>
                         )}

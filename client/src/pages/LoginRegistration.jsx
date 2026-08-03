@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, UserPlus, LogIn, Mail, Phone, Lock, User } from 'lucide-react';
 import { apiCall } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-
 const LoginRegistration = () => {
-    const { t } = useTranslation();
     const [isLogin, setIsLogin] = useState(true);
     const [formData, setFormData] = useState({ username: '', password: '', email: '', phone: '' });
     const [error, setError] = useState('');
@@ -40,7 +36,7 @@ const LoginRegistration = () => {
                 }
             } else {
                 setIsLogin(true);
-                setError(t('login.success'));
+                setError('Registration successful! Please login.');
             }
         } catch (err) {
             setError(err.message);
@@ -52,15 +48,12 @@ const LoginRegistration = () => {
     return (
         <div className="auth-container">
             <div className="auth-card glass-panel">
-                <div className="flex justify-end w-full p-2">
-                    <LanguageSwitcher />
-                </div>
                 <div className="auth-header">
                     <div className="logo-container">
                         <ShieldCheck size={48} className="logo-icon animate-pulse-slow" />
                     </div>
                     <h1>Vision Guard</h1>
-                    <p>{isLogin ? t('login.subtitle') : t('login.register_subtitle')}</p>
+                    <p>{isLogin ? 'Secure access to the surveillance core' : 'Register an operative account'}</p>
                 </div>
 
                 {error && <div className={`alert ${error.includes('successful') ? 'alert-success' : 'alert-error'}`}>{error}</div>}
@@ -68,35 +61,35 @@ const LoginRegistration = () => {
                 <form onSubmit={handleSubmit} className="auth-form">
                     <div className="input-group">
                         <User className="input-icon" size={20} />
-                        <input type="text" name="username" placeholder={t('login.username')} required value={formData.username} onChange={handleChange} />
+                        <input type="text" name="username" placeholder="Username" required value={formData.username} onChange={handleChange} />
                     </div>
 
                     <div className="input-group">
                         <Lock className="input-icon" size={20} />
-                        <input type="password" name="password" placeholder={t('login.password')} required value={formData.password} onChange={handleChange} />
+                        <input type="password" name="password" placeholder="Password" required value={formData.password} onChange={handleChange} />
                     </div>
 
                     {!isLogin && (
                         <>
                             <div className="input-group animate-slide-in">
                                 <Mail className="input-icon" size={20} />
-                                <input type="email" name="email" placeholder={t('login.email')} value={formData.email} onChange={handleChange} />
+                                <input type="email" name="email" placeholder="Email Address (Optional)" value={formData.email} onChange={handleChange} />
                             </div>
                             <div className="input-group animate-slide-in" style={{ animationDelay: '0.1s' }}>
                                 <Phone className="input-icon" size={20} />
-                                <input type="tel" name="phone" placeholder={t('login.phone')} value={formData.phone} onChange={handleChange} />
+                                <input type="tel" name="phone" placeholder="Phone Number (Optional)" value={formData.phone} onChange={handleChange} />
                             </div>
                         </>
                     )}
 
                     <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-                        {loading ? <span className="spinner"></span> : (isLogin ? <><LogIn size={20} /> {t('login.button')}</> : <><UserPlus size={20} /> {t('login.register_btn')}</>)}
+                        {loading ? <span className="spinner"></span> : (isLogin ? <><LogIn size={20} /> Login to System</> : <><UserPlus size={20} /> Register Account</>)}
                     </button>
                 </form>
 
                 <div className="auth-footer">
                     <button type="button" className="btn-link" onClick={() => { setIsLogin(!isLogin); setError(''); }}>
-                        {isLogin ? t('login.switch_to_register') : t('login.switch_to_login')}
+                        {isLogin ? "Don't have clearance? Request Access" : 'Already an operative? Return to Login'}
                     </button>
                 </div>
             </div>
