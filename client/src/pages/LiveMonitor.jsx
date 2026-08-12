@@ -1,32 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MonitorPlay, AlertTriangle, Activity } from 'lucide-react';
 import { apiCall } from '../services/api';
+
+const CAMERA_BASE_URL = 'http://localhost:8000';
 
 const LiveMonitor = () => {
     const navigate = useNavigate();
     const [streamUrl, setStreamUrl] = useState('');
     const [loading, setLoading] = useState(true);
     const [cameraError, setCameraError] = useState(false);
+    const [streamReady, setStreamReady] = useState(false);
+
+    const initStream = useCallback(async () => {
+        setLoading(true);
+        setCameraError(false);
+        setStreamReady(false);
+
+        try {
+            // Step 1: Get the stream URL from orchestration service
+            const data = await apiCall('/api/config/stream-url');
+            const url = data.stream_url;
+
+            // Step 2: Poll camera service health until it's producing frames
+            let ready = false;
+            for (let attempt = 0; attempt < 20; attempt++) {
+                try {
+                    const res = await fetch(`${CAMERA_BASE_URL}/health`);
+                    if (res.ok) {
+                        ready = true;
+                        break;
+                    }
+                } catch {
+                    // Camera service not reachable yet, keep trying
+                }
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+
+            if (!ready) {
+                setCameraError(true);
+                setLoading(false);
+                return;
+            }
+
+            // Step 3: Set the stream URL — add a cache-busting param to avoid stale browser cache
+            setStreamUrl(`${url}?t=${Date.now()}`);
+            setStreamReady(true);
+        } catch (err) {
+            console.error(err);
+            setCameraError(true);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchConfig = async () => {
-            try {
-                const data = await apiCall('/api/config/stream-url');
-                setStreamUrl(data.stream_url);
-            } catch (err) {
-                console.error(err);
-                setCameraError(true);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchConfig();
-    }, []);
+        initStream();
+    }, [initStream]);
 
     const handleImageError = () => {
         setCameraError(true);
+        setStreamReady(false);
     };
 
     return (
@@ -61,11 +95,11 @@ const LiveMonitor = () => {
                                 <AlertTriangle size={64} className="text-danger mb-4" />
                                 <h3>Feed Unavailable</h3>
                                 <p className="text-muted">The camera service is currently offline or unreachable. Please check the infrastructure.</p>
-                                <button className="btn btn-outline-primary mt-4" onClick={() => window.location.reload()}>
+                                <button className="btn btn-outline-primary mt-4" onClick={initStream}>
                                     Retry Connection
                                 </button>
                             </div>
-                        ) : (
+                        ) : streamReady ? (
                             <div className="video-feed-container">
                                 <img
                                     src={streamUrl}
@@ -77,7 +111,7 @@ const LiveMonitor = () => {
                                     Primary Sector - REC
                                 </div>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             </div>
@@ -86,3 +120,4 @@ const LiveMonitor = () => {
 };
 
 export default LiveMonitor;
+
