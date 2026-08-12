@@ -7,5 +7,10 @@ export default defineConfig({
     server: {
         host: true, // Listen on all addresses
         port: 3000,
+    },
+    preview: {
+        host: true,
+        port: 3000,
+        allowedHosts: true, // Safe — Vite is only reachable inside the Docker network
     }
 })
