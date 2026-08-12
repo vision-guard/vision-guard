@@ -1,4 +1,4 @@
-export const API_BASE = "http://localhost:8001"; // Orchestration Service
+export const API_BASE = ""; // Relative root served via Nginx reverse proxy
 
 export const apiCall = async (endpoint, options = {}) => {
     const defaultHeaders = {

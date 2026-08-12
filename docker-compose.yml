@@ -43,9 +43,6 @@ services:
     environment:
       MINIO_ROOT_USER: minio_user
       MINIO_ROOT_PASSWORD: minio_password
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     volumes:
       - minio_data:/data
     networks:
@@ -62,12 +59,10 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      USE_WEBCAM: "False"
+      CAMERA_SOURCE: "videos"
       RABBITMQ_HOST: rabbitmq
-    # devices:
-    #   - "/dev/video0:/dev/video0" # Optional, only if device exists
-    ports:
-      - "8000:8000"
+    volumes:
+      - ./camera_service/videos:/app/videos
     networks:
       - vision_guard_net
     deploy:
@@ -93,15 +88,6 @@ services:
       - ./algorithm_service/sentinel_best_f1.pth:/app/sentinel_best_f1.pth
     networks:
       - vision_guard_net
-    # deploy:
-    #   resources:
-    #     limits:
-    #       memory: 2.5G
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [ gpu ]
 
   orchestration_service:
     build: ./orchestration_service
@@ -121,10 +107,10 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minio_user
       MINIO_SECRET_KEY: minio_password
+      MINIO_EXTERNAL_HOST: "${PUBLIC_HOST:-visionguard.cs.colman.ac.il}"
+      BUCKET_NAME: "violent-segments"
       RABBITMQ_HOST: rabbitmq
-      CAMERA_STREAM_EXTERNAL_URL: "http://localhost:8000/live"
-    ports:
-      - "8001:8001"
+      CAMERA_STREAM_EXTERNAL_URL: "/live"
     networks:
       - vision_guard_net
     deploy:
@@ -135,14 +121,33 @@ services:
   client:
     build: ./client
     container_name: vision_guard_client
-    ports:
-      - "3000:3000"
     networks:
       - vision_guard_net
     deploy:
       resources:
         limits:
           memory: 256M
+
+  nginx:
+    build: ./nginx
+    container_name: vision_guard_nginx
+    depends_on:
+      - client
+      - orchestration_service
+      - camera_service
+      - minio
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - vision_guard_net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
 networks:
   vision_guard_net:

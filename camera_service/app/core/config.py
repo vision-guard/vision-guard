@@ -1,8 +1,8 @@
 import os
 
 class Settings:
-    USE_WEBCAM = os.getenv("USE_WEBCAM", "False").lower() == "true"
-    RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
-    VIDEO_FOLDER = "videos"
+    CAMERA_SOURCE: str = os.getenv("CAMERA_SOURCE", "videos")
+    RABBITMQ_HOST: str = os.getenv("RABBITMQ_HOST", "localhost")
+    VIDEO_FOLDER: str = os.getenv("VIDEO_FOLDER", "videos")
 
 settings = Settings()
