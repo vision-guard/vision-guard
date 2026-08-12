@@ -84,7 +84,7 @@ def process_event(event):
 
     object_name = f"{int(timestamp)}_{filename}"
     if upload_video(object_name, filename):
-        video_url = f"http://{settings.MINIO_EXTERNAL_HOST}/{settings.BUCKET_NAME}/{object_name}"
+        video_url = f"/minio-storage/{settings.BUCKET_NAME}/{object_name}"
         save_to_db(timestamp, confidence, camera_id, video_url)
         send_push_notifications(camera_id, confidence)
         os.remove(filename)

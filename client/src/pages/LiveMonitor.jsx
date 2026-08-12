@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MonitorPlay, AlertTriangle, Activity } from 'lucide-react';
 import { apiCall } from '../services/api';
 
-const CAMERA_BASE_URL = 'http://localhost:8000';
-
 const LiveMonitor = () => {
     const navigate = useNavigate();
     const [streamUrl, setStreamUrl] = useState('');
@@ -23,10 +21,11 @@ const LiveMonitor = () => {
             const url = data.stream_url;
 
             // Step 2: Poll camera service health until it's producing frames
+            // Uses relative URL — nginx proxies /health to camera_service
             let ready = false;
             for (let attempt = 0; attempt < 20; attempt++) {
                 try {
-                    const res = await fetch(`${CAMERA_BASE_URL}/health`);
+                    const res = await fetch('/health');
                     if (res.ok) {
                         ready = true;
                         break;
