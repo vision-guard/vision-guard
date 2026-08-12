@@ -20,12 +20,15 @@ def get_suspected_videos(current_user: dict = Depends(get_current_viewer_or_admi
         
         incidents = []
         for row in rows:
+            raw_url = row[4] or ""
+            # Strip legacy localhost references so video review works on domain
+            clean_url = raw_url.replace("http://localhost:9000", "").replace("http://localhost", "")
             incidents.append({
                 "id": row[0],
                 "timestamp": row[1],
                 "confidence": row[2],
                 "camera_id": row[3],
-                "video_url": row[4],
+                "video_url": clean_url,
                 "created_at": str(row[5])
             })
         return incidents

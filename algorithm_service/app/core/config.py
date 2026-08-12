@@ -2,7 +2,7 @@ import os
 
 class Settings:
     USE_GPU = os.getenv("USE_GPU", "False").lower() == "true"
-    RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
+    RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
     MODEL_PATH = os.getenv("MODEL_PATH", "sentinel_best_f1.pth")
     VIOLENCE_THRESHOLD = float(os.getenv("VIOLENCE_THRESHOLD", "0.5"))
     PROB_SMOOTHING_WINDOW = int(os.getenv("PROB_SMOOTHING_WINDOW", "5"))
