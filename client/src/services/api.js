@@ -1,4 +1,4 @@
-export const API_BASE = "http://localhost:8001"; // Orchestration Service
+export const API_BASE = ""; // Relative — nginx proxies /api/* to the orchestration service
 
 export const apiCall = async (endpoint, options = {}) => {
     const defaultHeaders = {
