@@ -94,7 +94,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
 
   algorithm_service:
     build: ./algorithm_service
@@ -110,6 +110,7 @@ services:
       PROB_SMOOTHING_WINDOW: "5"
       CONSECUTIVE_WINDOWS_TO_ALERT: "3"
       ALERT_COOLDOWN_SECONDS: "3"
+      CAMERA_IDS: "cam_1,cam_2,cam_3,cam_4"
     volumes:
       - ./algorithm_service/sentinel_best_f1.pth:/app/sentinel_best_f1.pth
     networks:
@@ -143,6 +144,7 @@ services:
       MINIO_ACCESS_KEY: minio_user
       MINIO_SECRET_KEY: minio_password
       RABBITMQ_HOST: rabbitmq
+      CAMERA_IDS: "cam_1,cam_2,cam_3,cam_4"
       # Production URLs — routed through nginx
       CAMERA_STREAM_EXTERNAL_URL: "/live"
       MINIO_EXTERNAL_HOST: "visionguard.cs.colman.ac.il/minio-storage"

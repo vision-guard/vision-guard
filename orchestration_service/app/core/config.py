@@ -12,5 +12,6 @@ class Settings:
     MINIO_EXTERNAL_HOST = os.getenv("MINIO_EXTERNAL_HOST", "localhost:9000")
     CAMERA_STREAM_EXTERNAL_URL = os.getenv("CAMERA_STREAM_EXTERNAL_URL", "http://localhost:8000/live")
     BUCKET_NAME = "violent-segments"
+    CAMERA_IDS = os.getenv("CAMERA_IDS", "cam_1,cam_2,cam_3,cam_4").split(",")
 
 settings = Settings()
