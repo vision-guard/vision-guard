@@ -6,5 +6,11 @@ router = APIRouter()
 
 @router.get("/stream-url")
 def get_stream_url(current_user: dict = Depends(get_current_viewer_or_admin)):
-    """Returns the URL of the Live Video Stream for authorized clients."""
-    return {"stream_url": settings.CAMERA_STREAM_EXTERNAL_URL}
+    """Returns stream URLs for all cameras."""
+    cameras = []
+    for cam_id in settings.CAMERA_IDS:
+        cameras.append({
+            "camera_id": cam_id,
+            "stream_url": f"{settings.CAMERA_STREAM_EXTERNAL_URL}/{cam_id}"
+        })
+    return {"cameras": cameras}

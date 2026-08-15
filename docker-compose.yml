@@ -12,10 +12,14 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - client
-      - orchestration_service
-      - camera_service
-      - minio
+      client:
+        condition: service_started
+      orchestration_service:
+        condition: service_healthy
+      camera_service:
+        condition: service_started
+      minio:
+        condition: service_started
     networks:
       - vision_guard_net
     restart: unless-stopped
@@ -41,7 +45,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1024M
 
   postgres:
     image: postgres:15-alpine
@@ -94,7 +98,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
 
   algorithm_service:
     build: ./algorithm_service
@@ -110,6 +114,7 @@ services:
       PROB_SMOOTHING_WINDOW: "5"
       CONSECUTIVE_WINDOWS_TO_ALERT: "3"
       ALERT_COOLDOWN_SECONDS: "3"
+      CAMERA_IDS: "cam_1,cam_2,cam_3,cam_4"
     volumes:
       - ./algorithm_service/sentinel_best_f1.pth:/app/sentinel_best_f1.pth
     networks:
@@ -134,6 +139,12 @@ services:
         condition: service_started
       minio:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/docs')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_USER: vision_user
@@ -143,6 +154,7 @@ services:
       MINIO_ACCESS_KEY: minio_user
       MINIO_SECRET_KEY: minio_password
       RABBITMQ_HOST: rabbitmq
+      CAMERA_IDS: "cam_1,cam_2,cam_3,cam_4"
       # Production URLs — routed through nginx
       CAMERA_STREAM_EXTERNAL_URL: "/live"
       MINIO_EXTERNAL_HOST: "visionguard.cs.colman.ac.il/minio-storage"
@@ -151,7 +163,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1024M
 
   client:
     build: ./client

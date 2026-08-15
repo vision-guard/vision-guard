@@ -10,6 +10,15 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import push router separately — if pywebpush/cryptography fail,
+# the rest of the service should still start and serve requests.
+try:
+    from app.api.routers import push
+    _push_available = True
+except ImportError as e:
+    logger.warning(f"Push notifications module unavailable (will be disabled): {e}")
+    _push_available = False
+
 app = FastAPI(title="Vision Guard Orchestration API")
 
 app.add_middleware(
@@ -20,8 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api.routers import auth, users, incidents, config, push
-
 # Include Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 # Note: For frontend compatibility we keep /suspected_videos instead of /api/incidents
@@ -29,7 +36,8 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(incidents.router, prefix="/suspected_videos", tags=["incidents"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
-app.include_router(push.router, prefix="/api/push", tags=["push"])
+if _push_available:
+    app.include_router(push.router, prefix="/api/push", tags=["push"])
 
 def startup_tasks():
     # Wait lightly for db/mq to be truly ready in docker network
