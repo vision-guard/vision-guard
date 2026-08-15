@@ -45,7 +45,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1024M
 
   postgres:
     image: postgres:15-alpine
@@ -163,7 +163,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1024M
 
   client:
     build: ./client
