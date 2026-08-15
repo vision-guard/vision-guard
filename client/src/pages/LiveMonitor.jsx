@@ -8,10 +8,19 @@ const CameraFeed = ({ camera, index }) => {
     const [error, setError] = useState(false);
     const [streamUrl, setStreamUrl] = useState('');
     const imgRef = useRef(null);
+    const lastFrameTimeRef = useRef(Date.now());
+    const watchdogRef = useRef(null);
+    const retryTimeoutRef = useRef(null);
 
     const initFeed = useCallback(async () => {
         setLoading(true);
         setError(false);
+
+        // Clear any pending retry
+        if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current);
+            retryTimeoutRef.current = null;
+        }
 
         try {
             // Poll camera-specific health until ready
@@ -32,13 +41,19 @@ const CameraFeed = ({ camera, index }) => {
             if (!ready) {
                 setError(true);
                 setLoading(false);
+                // Auto-retry after 5 seconds
+                retryTimeoutRef.current = setTimeout(initFeed, 5000);
                 return;
             }
 
+            // Bust the browser cache with a fresh timestamp so the browser
+            // opens a brand-new MJPEG connection.
             setStreamUrl(`${camera.stream_url}?t=${Date.now()}`);
+            lastFrameTimeRef.current = Date.now();
         } catch (err) {
             console.error(err);
             setError(true);
+            retryTimeoutRef.current = setTimeout(initFeed, 5000);
         } finally {
             setLoading(false);
         }
@@ -46,6 +61,12 @@ const CameraFeed = ({ camera, index }) => {
 
     useEffect(() => {
         initFeed();
+
+        return () => {
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current);
+            }
+        };
     }, [initFeed]);
 
     // Cleanup: force-close the MJPEG connection when this component unmounts.
@@ -63,13 +84,44 @@ const CameraFeed = ({ camera, index }) => {
         };
     }, [streamUrl]);
 
+    // Watchdog: detect when the MJPEG stream silently stalls (no new frames
+    // arriving even though the <img> hasn't fired an onerror). This covers
+    // edge-cases like the TCP connection staying alive but the server no longer
+    // sending new JPEG boundaries.
+    useEffect(() => {
+        if (!streamUrl || error) return;
+
+        watchdogRef.current = setInterval(() => {
+            const elapsed = Date.now() - lastFrameTimeRef.current;
+            // If no frame has arrived for 15 seconds, force a reconnect
+            if (elapsed > 15000) {
+                console.warn(`[${camera.camera_id}] Stream stale for ${elapsed}ms – reconnecting`);
+                // Kill the current connection
+                if (imgRef.current) {
+                    imgRef.current.src = '';
+                    imgRef.current.removeAttribute('src');
+                }
+                initFeed();
+            }
+        }, 5000);
+
+        return () => {
+            if (watchdogRef.current) {
+                clearInterval(watchdogRef.current);
+            }
+        };
+    }, [streamUrl, error, camera.camera_id, initFeed]);
+
     const handleImageError = () => {
         setError(true);
+        // Auto-reconnect after a short delay
+        retryTimeoutRef.current = setTimeout(initFeed, 3000);
     };
 
     const handleImageLoad = () => {
         setLoading(false);
         setError(false);
+        lastFrameTimeRef.current = Date.now();
     };
 
     // Determine label styling based on camera type
@@ -105,8 +157,8 @@ const CameraFeed = ({ camera, index }) => {
                 ) : error ? (
                     <div className="camera-cell-error">
                         <AlertTriangle size={28} className="text-danger" />
-                        <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Feed Offline</p>
-                        <button className="btn-retry" onClick={initFeed}>Retry</button>
+                        <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Reconnecting...</p>
+                        <button className="btn-retry" onClick={initFeed}>Retry Now</button>
                     </div>
                 ) : streamUrl ? (
                     <>

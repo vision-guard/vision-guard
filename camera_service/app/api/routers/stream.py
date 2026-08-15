@@ -59,11 +59,32 @@ async def video_feed(camera_id: str):
                 break
             time.sleep(0.5)
 
+        last_frame_id = None  # track by id() to avoid resending identical bytes
+        stale_count = 0       # consecutive loops with no fresh frame
+
         while True:
             frame = get_latest_frame(camera_id)
-            if frame:
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+            if frame is not None:
+                frame_id = id(frame)
+                # Only yield when we have a genuinely new frame
+                if frame_id != last_frame_id:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    last_frame_id = frame_id
+                    stale_count = 0
+            else:
+                # No fresh frame available (video looping / camera restarting).
+                # Reset tracking so the next fresh frame is sent immediately.
+                stale_count += 1
+                last_frame_id = None
+
+                if stale_count > 300:
+                    # ~10 seconds with no frame — something is very wrong.
+                    # Break the generator so the client sees an error and can
+                    # reconnect, rather than staring at a frozen image.
+                    return
+
             time.sleep(1 / 30)
 
     return StreamingResponse(

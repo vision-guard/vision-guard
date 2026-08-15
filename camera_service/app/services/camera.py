@@ -7,7 +7,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-latest_frames = {}
+latest_frames = {}   # camera_id -> (frame_bytes, timestamp)
 lock = threading.Lock()
 
 
@@ -57,9 +57,8 @@ def camera_loop(camera_id, video_file):
         ret, frame = cap.read()
 
         if not ret:
-            # Video ended — loop back to beginning
-            cap.release()
-            cap = None
+            # Video ended — loop back to beginning seamlessly
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             continue
 
         # Resize and encode
@@ -67,9 +66,9 @@ def camera_loop(camera_id, video_file):
         _, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
         frame_bytes = buffer.tobytes()
 
-        # Store latest frame
+        # Store latest frame with timestamp
         with lock:
-            latest_frames[camera_id] = frame_bytes
+            latest_frames[camera_id] = (frame_bytes, time.time())
 
         # Publish to RabbitMQ
         try:
@@ -104,10 +103,20 @@ def start_camera_threads():
         logger.info(f"Started thread for {camera_id} -> {video_file}")
 
 
-def get_latest_frame(camera_id):
-    """Get the latest JPEG frame for a specific camera."""
+def get_latest_frame(camera_id, max_age=5.0):
+    """Get the latest JPEG frame for a specific camera.
+
+    Returns the frame bytes only if it was produced within *max_age* seconds.
+    Otherwise returns None so callers know the feed is stale.
+    """
     with lock:
-        return latest_frames.get(camera_id)
+        entry = latest_frames.get(camera_id)
+        if entry is None:
+            return None
+        frame_bytes, ts = entry
+        if time.time() - ts > max_age:
+            return None
+        return frame_bytes
 
 
 def get_all_camera_ids():
